@@ -1,0 +1,44 @@
+[package]
+name = "koliseuot-launcher"
+version = "0.1.0"
+description = "KoliseuOT Launcher"
+authors = ["KoliseuOT"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.6", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.10.3", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-updater = "2"
+
+# Para verificação de processos
+sysinfo = "0.35"
+
+# Para hashing SHA-256
+sha2 = "0.10"
+hex = "0.4"
+
+# Para downloads HTTP
+reqwest = { version = "0.12", features = ["json", "stream"] }
+tokio = { version = "1", features = ["full"] }
+
+# Para manipulação de arquivos
+tempfile = "3"
+zip = "2"
+
+# Para detectar janela do processo
+winapi = { version = "0.3", features = ["winuser", "windef", "minwindef", "processthreadsapi"] }
+tauri-plugin-process = "2.3.1"

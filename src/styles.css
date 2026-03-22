@@ -1,0 +1,440 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: #1a1a2e;
+  --accent: #c9a14a;
+  --accent-hover: #dbb55a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #888;
+  --danger: #e74c3c;
+  --success: #2ecc71;
+  --border: #2a2a3e;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ========== Title Bar ========== */
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.titlebar-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.titlebar-version {
+  font-size: 10px;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  pointer-events: none;
+  margin-right: 8px;
+}
+
+.titlebar-buttons {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.titlebar-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.titlebar-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.titlebar-btn.close:hover {
+  background: var(--danger);
+  color: white;
+}
+
+/* ========== Launcher Layout ========== */
+.launcher {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.launcher-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 40px 20px;
+  position: relative;
+}
+
+.launcher-content::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("./assets/background.png") center center / cover no-repeat;
+  opacity: 0.3;
+  z-index: 0;
+}
+
+.launcher-content>* {
+  position: relative;
+  z-index: 1;
+}
+
+/* ========== Header ========== */
+.launcher-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.launcher-logo {
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  text-shadow: 0 0 30px rgba(201, 161, 74, 0.3);
+}
+
+.launcher-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* ========== Tabs ========== */
+.tabs-container {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.tab-group {
+  display: flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tab-group-label {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.2);
+  border-right: 1px solid var(--border);
+}
+
+.tab-btn {
+  position: relative;
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab-btn:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.tab-btn:hover:not(:disabled):not(.active) {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+}
+
+.tab-btn.active {
+  background: rgba(201, 161, 74, 0.1);
+  color: var(--accent);
+}
+
+.tab-btn.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+.tab-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ========== Status Area ========== */
+.status-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-message {
+  font-size: 14px;
+  text-align: center;
+}
+
+.status-ready {
+  color: var(--success);
+}
+
+.status-update_available {
+  color: var(--accent);
+}
+
+.status-error {
+  color: var(--danger);
+}
+
+.status-checking,
+.status-updating,
+.status-verifying,
+.status-repairing {
+  color: var(--text-secondary);
+}
+
+.error-message {
+  font-size: 12px;
+  color: var(--danger);
+  opacity: 0.8;
+}
+
+/* ========== Progress Bar ========== */
+.progress-container {
+  width: 100%;
+  max-width: 500px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+
+.progress-stats {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-percent {
+  display: block;
+  text-align: right;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* ========== Buttons ========== */
+.launcher-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.btn {
+  padding: 14px 48px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: all 0.2s;
+}
+
+.btn-play {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: var(--bg-primary);
+  box-shadow: 0 4px 20px rgba(201, 161, 74, 0.3);
+}
+
+.btn-play:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(201, 161, 74, 0.5);
+}
+
+.btn-update {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  box-shadow: 0 4px 20px rgba(52, 152, 219, 0.3);
+}
+
+.btn-update:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(52, 152, 219, 0.5);
+}
+
+.btn-loading {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.btn-repair {
+  background: linear-gradient(135deg, #e67e22, #d35400);
+  color: white;
+  padding: 14px 32px;
+}
+
+.btn-repair:hover {
+  transform: translateY(-2px);
+}
+
+.btn-retry {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 14px 32px;
+}
+
+.btn-retry:hover {
+  background: var(--bg-secondary);
+}
+
+/* ========== Footer ========== */
+.launcher-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.footer-right {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-icon:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-discord {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #5865f2;
+  border: none;
+  color: white;
+  padding: 8px 20px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-discord:hover {
+  background: #4752c4;
+}
+
+.btn-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 8px 20px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-footer:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
+.btn-icon-img {
+  width: 24px;
+  height: 24px;
+}

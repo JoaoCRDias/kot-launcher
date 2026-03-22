@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo check:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx @tauri-apps/cli signer generate -w src-tauri/keys/koliseuot.key)",
+      "Bash(npm install:*)",
+      "Bash(cargo add:*)",
+      "Bash(ls -la \"c:/Users/joaoc/KoliseuOT/launcher/src-tauri/target/release/bundle/nsis/\"*.zip*)",
+      "Bash(ls -la \"c:/Users/joaoc/KoliseuOT/launcher/src-tauri/target/release/bundle/nsis/\"*.sig*)"
+    ]
+  }
+}
