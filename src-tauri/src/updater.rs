@@ -23,13 +23,13 @@ fn get_base_dir() -> PathBuf {
     PathBuf::from(app_data).join("KoliseuOT")
 }
 
-/// Diretório de instalação para um servidor/client específico
-/// Ex: %APPDATA%/KoliseuOT/production/cip
+/// Diretório de instalação para um servidor + tipo de client
+/// Ex: %APPDATA%/KoliseuOT/production/cip  ou  %APPDATA%/KoliseuOT/production/otc
 pub fn get_install_dir(server: &str, client_type: &str) -> PathBuf {
     get_base_dir().join(server).join(client_type)
 }
 
-/// Caminho do manifest local para um servidor/client específico
+/// Caminho do manifest local para um servidor + tipo de client
 pub fn get_local_manifest_path(server: &str, client_type: &str) -> PathBuf {
     get_install_dir(server, client_type).join("manifest.json")
 }
@@ -85,8 +85,11 @@ fn cleanup_dir_recursive(
             continue;
         }
 
-        // Verificar se está nos preserve_paths
-        if preserve_paths.iter().any(|p| rel_path.starts_with(p)) {
+        // Verificar se está nos preserve_paths (comparação por segmentos de path)
+        if preserve_paths.iter().any(|p| {
+            let p_trimmed = p.trim_end_matches('/');
+            rel_path == p_trimmed || rel_path.starts_with(&format!("{}/", p_trimmed))
+        }) {
             continue;
         }
 
@@ -149,7 +152,7 @@ where
 }
 
 /// Extrai um ZIP para o diretório de instalação, emitindo progresso por ficheiro
-fn extract_zip<F>(zip_data: &[u8], install_dir: &Path, on_progress: &F) -> Result<(), String>
+fn extract_zip<F>(zip_data: &[u8], install_dir: &Path, preserve_paths: &[String], on_progress: &F) -> Result<(), String>
 where
     F: Fn(DownloadProgress),
 {
@@ -180,6 +183,20 @@ where
 
         // Ignorar entradas vazias
         if rel_path.is_empty() {
+            continue;
+        }
+
+        // Não sobrescrever ficheiros em diretórios preservados
+        if preserve_paths.iter().any(|p| {
+            let p_trimmed = p.trim_end_matches('/');
+            rel_path == p_trimmed || rel_path.starts_with(&format!("{}/", p_trimmed))
+        }) {
+            on_progress(DownloadProgress {
+                stage: "extracting".to_string(),
+                bytes_downloaded: (i + 1) as u64,
+                bytes_total: total as u64,
+                percentage: ((i + 1) as f64 / total as f64) * 100.0,
+            });
             continue;
         }
 
@@ -234,7 +251,7 @@ fn detect_zip_prefix(archive: &mut ZipArchive<Cursor<&[u8]>>) -> Option<String> 
     None
 }
 
-/// Executa a atualização completa de um client específico
+/// Executa a atualização completa do client
 pub async fn perform_update<F>(
     manifest_url: &str,
     server: &str,
@@ -279,8 +296,8 @@ where
     });
     cleanup_files(&install_dir, preserve)?;
 
-    // 4. Extrair ZIP
-    extract_zip(&zip_data, &install_dir, &on_progress)?;
+    // 4. Extrair ZIP (sem sobrescrever diretórios preservados)
+    extract_zip(&zip_data, &install_dir, preserve, &on_progress)?;
 
     // 5. Gerar hashes dos ficheiros extraídos (para verificação de integridade futura)
     let files = generate_hashes_with_progress(&install_dir, preserve, &|current, total| {
@@ -309,7 +326,7 @@ where
     Ok(client_entry.version.clone())
 }
 
-/// Verifica integridade dos arquivos instalados de um client específico
+/// Verifica integridade dos arquivos instalados
 pub fn verify_integrity(server: &str, client_type: &str) -> Result<IntegrityResult, String> {
     let install_dir = get_install_dir(server, client_type);
     let manifest_path = get_local_manifest_path(server, client_type);
@@ -429,7 +446,7 @@ fn detect_zip_prefix_from_slice(data: &[u8]) -> Option<String> {
     None
 }
 
-/// Retorna informações sobre a versão instalada de um client específico
+/// Retorna informações sobre a versão instalada
 pub fn get_installed_version(server: &str, client_type: &str) -> Option<String> {
     let manifest_path = get_local_manifest_path(server, client_type);
     let local = LocalManifest::load(&manifest_path)?;

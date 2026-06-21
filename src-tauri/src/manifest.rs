@@ -4,20 +4,24 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-/// Entrada de client (cip ou otc) dentro de um servidor
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Entrada de client dentro de um servidor
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ClientEntry {
+    #[serde(default)]
     pub version: String,
     #[serde(default)]
     pub download_url: String,
-    #[serde(default, rename = "preservedDir")]
+    #[serde(default, rename = "preservedDirs")]
     pub preserved_dir: Vec<String>,
 }
 
-/// Entrada de servidor (production ou testServer)
+/// Entrada de servidor (production ou testServer) — cada um expõe os dois tipos de
+/// client que coexistem: `cip` (client oficial da Cipsoft) e `otc` (KoliseuClient).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerEntry {
+    #[serde(default)]
     pub cip: ClientEntry,
+    #[serde(default)]
     pub otc: ClientEntry,
 }
 
@@ -30,7 +34,7 @@ pub struct RemoteManifest {
 }
 
 impl RemoteManifest {
-    /// Obtém a entrada de client para um dado servidor e tipo
+    /// Obtém a entrada de client para um dado servidor e tipo (cip | otc)
     pub fn get_client(&self, server: &str, client_type: &str) -> Result<&ClientEntry, String> {
         let server_entry = match server {
             "production" => &self.production,
@@ -185,7 +189,10 @@ fn collect_files(
             continue;
         }
 
-        if preserve_paths.iter().any(|p| rel_path.starts_with(p)) {
+        if preserve_paths.iter().any(|p| {
+            let p_trimmed = p.trim_end_matches('/');
+            rel_path == p_trimmed || rel_path.starts_with(&format!("{}/", p_trimmed))
+        }) {
             continue;
         }
 
