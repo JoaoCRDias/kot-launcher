@@ -21,8 +21,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            commands::check_tibia_running,
-            commands::get_running_tibia_processes,
+            commands::check_client_running,
+            commands::get_running_clients,
             commands::get_installed_version,
             commands::check_for_updates,
             commands::start_update,
@@ -30,6 +30,8 @@ pub fn run() {
             commands::repair_files,
             commands::get_install_path,
             commands::launch_client,
+            commands::get_launcher_config,
+            commands::set_close_on_launch,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

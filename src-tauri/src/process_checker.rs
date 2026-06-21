@@ -1,38 +1,37 @@
+use std::path::{Path, PathBuf};
 use sysinfo::System;
 
-const TIBIA_PROCESS_NAMES: &[&str] = &[
-    "client.exe",
-    "tibia.exe",
-    "koliseuot.exe",
-    "otclient.exe",
-    "otclientv8.exe",
-];
-
-/// Verifica se algum processo do client Tibia está rodando
-pub fn is_tibia_running() -> bool {
-    let sys = System::new_all();
-    for process in sys.processes().values() {
-        let name = process.name().to_string_lossy().to_lowercase();
-        for tibia_name in TIBIA_PROCESS_NAMES {
-            if name == *tibia_name {
-                return true;
-            }
-        }
-    }
-    false
+/// Canonicaliza um caminho, com fallback para o próprio caminho se falhar
+/// (ex.: a pasta ainda não existe). No Windows isso normaliza para o formato
+/// `\\?\C:\...`, garantindo que `starts_with` compare prefixos consistentes.
+fn canon(p: &Path) -> PathBuf {
+    std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf())
 }
 
-/// Retorna lista de processos do Tibia encontrados
-pub fn get_running_tibia_processes() -> Vec<String> {
+/// Retorna os caminhos dos executáveis EM EXECUÇÃO cujo binário está dentro de
+/// `install_dir` — ou seja, exatamente o client que se quer atualizar/reparar,
+/// e não qualquer `client.exe` aberto no sistema.
+pub fn running_paths_in(install_dir: &Path) -> Vec<String> {
+    let target = canon(install_dir);
     let sys = System::new_all();
     let mut found = Vec::new();
+
     for process in sys.processes().values() {
-        let name = process.name().to_string_lossy().to_lowercase();
-        for tibia_name in TIBIA_PROCESS_NAMES {
-            if name == *tibia_name && !found.contains(&name) {
-                found.push(name.clone());
+        if let Some(exe) = process.exe() {
+            let exe_canon = canon(exe);
+            if exe_canon.starts_with(&target) {
+                let s = exe_canon.to_string_lossy().to_string();
+                if !found.contains(&s) {
+                    found.push(s);
+                }
             }
         }
     }
+
     found
+}
+
+/// True se o client instalado em `install_dir` está rodando agora.
+pub fn is_client_running_in(install_dir: &Path) -> bool {
+    !running_paths_in(install_dir).is_empty()
 }

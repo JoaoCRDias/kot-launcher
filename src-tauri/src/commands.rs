@@ -8,14 +8,58 @@ use tauri::{Emitter, Window};
 /// URL da API de verificação de versão
 const MANIFEST_URL: &str = "https://koliseuot.com.br/api/client/version";
 
-#[tauri::command]
-pub fn check_tibia_running() -> bool {
-    process_checker::is_tibia_running()
+// ---------------------------------------------------------------------------
+// Configuração persistente do launcher (%APPDATA%/KoliseuOT/launcher.json)
+// ---------------------------------------------------------------------------
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+pub struct LauncherConfig {
+    /// Se true, o launcher fecha automaticamente após iniciar o client.
+    #[serde(default)]
+    close_on_launch: bool,
+}
+
+fn launcher_config_path() -> std::path::PathBuf {
+    let app_data = std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string());
+    std::path::PathBuf::from(app_data)
+        .join("KoliseuOT")
+        .join("launcher.json")
+}
+
+fn read_launcher_config() -> LauncherConfig {
+    std::fs::read_to_string(launcher_config_path())
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
 }
 
 #[tauri::command]
-pub fn get_running_tibia_processes() -> Vec<String> {
-    process_checker::get_running_tibia_processes()
+pub fn get_launcher_config() -> LauncherConfig {
+    read_launcher_config()
+}
+
+#[tauri::command]
+pub fn set_close_on_launch(enabled: bool) -> Result<(), String> {
+    let path = launcher_config_path();
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+    let cfg = LauncherConfig {
+        close_on_launch: enabled,
+    };
+    let json = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
+    std::fs::write(path, json).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn check_client_running(server: String, client_type: String) -> bool {
+    let dir = updater::get_install_dir(&server, &client_type);
+    process_checker::is_client_running_in(&dir)
+}
+
+#[tauri::command]
+pub fn get_running_clients(server: String, client_type: String) -> Vec<String> {
+    let dir = updater::get_install_dir(&server, &client_type);
+    process_checker::running_paths_in(&dir)
 }
 
 #[tauri::command]
@@ -59,8 +103,11 @@ pub async fn start_update(
     server: String,
     client_type: String,
 ) -> Result<String, String> {
-    if process_checker::is_tibia_running() {
-        return Err("Feche o client do Tibia antes de atualizar.".to_string());
+    // Bloqueia só se ESTE client (o que está a ser atualizado) estiver aberto,
+    // não qualquer client.exe do sistema.
+    let install_dir = updater::get_install_dir(&server, &client_type);
+    if process_checker::is_client_running_in(&install_dir) {
+        return Err("Feche este client (a versão que está a atualizar) antes de continuar.".to_string());
     }
 
     let win = window.clone();
@@ -86,8 +133,9 @@ pub async fn repair_files(
     server: String,
     client_type: String,
 ) -> Result<IntegrityResult, String> {
-    if process_checker::is_tibia_running() {
-        return Err("Feche o client do Tibia antes de reparar.".to_string());
+    let install_dir = updater::get_install_dir(&server, &client_type);
+    if process_checker::is_client_running_in(&install_dir) {
+        return Err("Feche este client (a versão que está a reparar) antes de continuar.".to_string());
     }
 
     updater::repair_files(MANIFEST_URL, &server, &client_type).await
@@ -104,8 +152,10 @@ pub fn get_install_path(server: String, client_type: String) -> String {
 pub async fn launch_client(server: String, client_type: String) -> Result<(), String> {
     let install_dir = updater::get_install_dir(&server, &client_type);
 
+    // CIP (client oficial da Cipsoft) roda bin/client.exe; OTC (KoliseuClient) roda o
+    // executável na raiz da pasta instalada.
     let (exe_path, work_dir) = if client_type == "otc" {
-        (install_dir.join("otclient.exe"), install_dir.clone())
+        (install_dir.join("KoliseuClient.exe"), install_dir.clone())
     } else {
         (install_dir.join("bin").join("client.exe"), install_dir.join("bin"))
     };
@@ -114,8 +164,27 @@ pub async fn launch_client(server: String, client_type: String) -> Result<(), St
         return Err("Executável do client não encontrado. Verifique a instalação.".to_string());
     }
 
-    let child = std::process::Command::new(&exe_path)
-        .current_dir(&work_dir)
+    // Passa o caminho do próprio launcher para o client, para que o botão
+    // "Change Client" (entergame.lua -> os.getenv("KOLISEU_LAUNCHER")) consiga
+    // reabrir este launcher independentemente do layout de instalação.
+    let launcher_path = std::env::current_exe()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    let mut command = std::process::Command::new(&exe_path);
+    command.current_dir(&work_dir);
+    command.env("KOLISEU_LAUNCHER", launcher_path);
+
+    // OTC-only: informa ao client a versão instalada + o ambiente, para o gate de
+    // atualização no login (entergame.lua compara com /api/client/version e bloqueia
+    // o login se estiver desatualizado). O client oficial (CIP) ignora estas vars.
+    if client_type == "otc" {
+        let installed = updater::get_installed_version(&server, &client_type).unwrap_or_default();
+        command.env("KOLISEU_CLIENT_VERSION", installed);
+        command.env("KOLISEU_CLIENT_ENV", &server);
+    }
+
+    let child = command
         .spawn()
         .map_err(|e| format!("Erro ao iniciar client: {}", e))?;
 

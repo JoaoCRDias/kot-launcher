@@ -25,32 +25,36 @@ export interface DownloadProgress {
   percentage: number;
 }
 
-export async function checkTibiaRunning(): Promise<boolean> {
-  return invoke<boolean>("check_tibia_running");
+export interface LauncherConfig {
+  close_on_launch: boolean;
 }
 
-export async function getRunningTibiaProcesses(): Promise<string[]> {
-  return invoke<string[]>("get_running_tibia_processes");
+export async function checkClientRunning(
+  server: Server,
+  clientType: ClientType
+): Promise<boolean> {
+  return invoke<boolean>("check_client_running", { server, clientType });
+}
+
+export async function getRunningClients(
+  server: Server,
+  clientType: ClientType
+): Promise<string[]> {
+  return invoke<string[]>("get_running_clients", { server, clientType });
 }
 
 export async function getInstalledVersion(
   server: Server,
   clientType: ClientType
 ): Promise<string | null> {
-  return invoke<string | null>("get_installed_version", {
-    server,
-    clientType,
-  });
+  return invoke<string | null>("get_installed_version", { server, clientType });
 }
 
 export async function checkForUpdates(
   server: Server,
   clientType: ClientType
 ): Promise<UpdateCheckResult> {
-  return invoke<UpdateCheckResult>("check_for_updates", {
-    server,
-    clientType,
-  });
+  return invoke<UpdateCheckResult>("check_for_updates", { server, clientType });
 }
 
 export async function startUpdate(
@@ -94,4 +98,14 @@ export function onUpdateProgress(
   return listen<DownloadProgress>("update-progress", (event) => {
     callback(event.payload);
   });
+}
+
+/** Persisted launcher preferences (%APPDATA%/KoliseuOT/launcher.json). */
+export async function getLauncherConfig(): Promise<LauncherConfig> {
+  return invoke<LauncherConfig>("get_launcher_config");
+}
+
+/** "Close on launch": exit the launcher automatically after the client starts. */
+export async function setCloseOnLaunch(enabled: boolean): Promise<void> {
+  return invoke<void>("set_close_on_launch", { enabled });
 }

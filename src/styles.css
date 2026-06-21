@@ -369,6 +369,11 @@ body {
   border-top: 1px solid var(--border);
 }
 
+.footer-left {
+  display: flex;
+  gap: 8px;
+}
+
 .footer-right {
   display: flex;
   gap: 8px;
@@ -437,4 +442,97 @@ body {
 .btn-icon-img {
   width: 24px;
   height: 24px;
+}
+
+/* ========== Close-on-launch toggle (epic checkbox) ========== */
+.launch-options {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+
+.epic-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  padding: 7px 12px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: linear-gradient(145deg, rgba(20, 20, 32, 0.55), rgba(10, 10, 16, 0.55));
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.epic-checkbox:hover {
+  border-color: rgba(201, 161, 74, 0.35);
+  background: linear-gradient(145deg, rgba(26, 26, 42, 0.7), rgba(12, 12, 20, 0.7));
+}
+
+/* Hide the native input but keep it focusable for accessibility */
+.epic-checkbox input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.epic-checkbox-box {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  background: linear-gradient(145deg, #15151f, #0b0b11);
+  border: 1px solid #3a3a52;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.65);
+  transition: all 0.18s ease;
+}
+
+/* Checkmark */
+.epic-checkbox-box::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--bg-primary);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform 0.18s ease;
+}
+
+.epic-checkbox input:checked + .epic-checkbox-box {
+  background: linear-gradient(145deg, var(--accent-hover), var(--accent));
+  border-color: var(--accent-hover);
+  box-shadow: 0 0 10px rgba(201, 161, 74, 0.45),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25);
+}
+
+.epic-checkbox input:checked + .epic-checkbox-box::after {
+  transform: rotate(45deg) scale(1);
+}
+
+.epic-checkbox input:focus-visible + .epic-checkbox-box {
+  outline: 2px solid rgba(201, 161, 74, 0.6);
+  outline-offset: 2px;
+}
+
+.epic-checkbox-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text-secondary);
+  transition: color 0.18s ease;
+}
+
+.epic-checkbox:hover .epic-checkbox-text {
+  color: var(--text-primary);
+}
+
+.epic-checkbox input:checked ~ .epic-checkbox-text {
+  color: var(--accent);
+  text-shadow: 0 0 8px rgba(201, 161, 74, 0.35);
 }

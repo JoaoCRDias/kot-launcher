@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { check } from "@tauri-apps/plugin-updater";
-import { relaunch } from "@tauri-apps/plugin-process";
+import { relaunch, exit } from "@tauri-apps/plugin-process";
 import TitleBar from "./components/TitleBar";
 import ProgressBar from "./components/ProgressBar";
 import coinIcon from "./assets/coin.png";
 import discordIcon from "./assets/discord.png";
 import {
-  checkTibiaRunning,
+  checkClientRunning,
   checkForUpdates,
   startUpdate,
   verifyIntegrity,
@@ -15,6 +15,8 @@ import {
   repairFiles,
   getInstalledVersion,
   onUpdateProgress,
+  getLauncherConfig,
+  setCloseOnLaunch,
   DownloadProgress,
   UpdateCheckResult,
   Server,
@@ -29,7 +31,8 @@ type LauncherStatus =
   | "error"
   | "integrity_failed"
   | "verifying"
-  | "repairing";
+  | "repairing"
+  | "unavailable";
 
 export default function App() {
   const [server, setServer] = useState<Server>("production");
@@ -46,6 +49,30 @@ export default function App() {
   const [launcherUpdating, setLauncherUpdating] = useState(false);
   const [launcherUpdateMsg, setLauncherUpdateMsg] = useState<string | null>(null);
   const [launcherUpdateProgress, setLauncherUpdateProgress] = useState(0);
+
+  // "Close on launch": when enabled, the launcher exits automatically right after
+  // the client window comes up. Persisted in %APPDATA%/KoliseuOT/launcher.json.
+  const [closeOnLaunch, setCloseOnLaunchState] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const cfg = await getLauncherConfig();
+        setCloseOnLaunchState(cfg.close_on_launch);
+      } catch (err) {
+        console.error("Failed to load launcher config:", err);
+      }
+    })();
+  }, []);
+
+  async function handleCloseOnLaunchToggle(value: boolean) {
+    setCloseOnLaunchState(value);
+    try {
+      await setCloseOnLaunch(value);
+    } catch (err) {
+      console.error("Failed to persist Close on launch:", err);
+    }
+  }
 
   // Verificar update do próprio launcher ao abrir e a cada 15 minutos
   useEffect(() => {
@@ -122,9 +149,21 @@ export default function App() {
   // Re-verificar quando mudar servidor ou tipo de client
   useEffect(() => {
     initCheck();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [server, clientType]);
 
   async function initCheck() {
+    // Production OTC is disabled for now (first weeks): only the test-server OTC can be
+    // downloaded. Hard-gate it in the launcher regardless of what the backend advertises.
+    if (server === "production" && clientType === "otc") {
+      setStatus("unavailable");
+      setVersion(null);
+      setError(null);
+      setDownloadAvailable(false);
+      setStatusMessage("O client OTC de produção ainda não está disponível. Baixe o OTC no Test Server.");
+      return;
+    }
+
     try {
       setStatus("checking");
       setError(null);
@@ -160,9 +199,9 @@ export default function App() {
 
   async function handleUpdate() {
     try {
-      const tibiaRunning = await checkTibiaRunning();
-      if (tibiaRunning) {
-        setError("Feche o client do Tibia antes de atualizar!");
+      const running = await checkClientRunning(server, clientType);
+      if (running) {
+        setError("Feche este client (a versão que está a atualizar) antes de continuar!");
         return;
       }
 
@@ -213,9 +252,9 @@ export default function App() {
 
   async function handleRepair() {
     try {
-      const tibiaRunning = await checkTibiaRunning();
-      if (tibiaRunning) {
-        setError("Feche o client do Tibia antes de reparar!");
+      const running = await checkClientRunning(server, clientType);
+      if (running) {
+        setError("Feche este client (a versão que está a reparar) antes de continuar!");
         return;
       }
 
@@ -242,6 +281,10 @@ export default function App() {
       setLaunching(true);
       setError(null);
       await launchClient(server, clientType);
+      if (closeOnLaunch) {
+        await exit(0); // launcher's job is done -> close it
+        return;
+      }
     } catch (err) {
       setError(String(err));
     } finally {
@@ -265,7 +308,7 @@ export default function App() {
     status === "checking" || status === "updating" || status === "verifying" || status === "repairing";
 
   const serverLabel = server === "production" ? "Production" : "Test Server";
-  const clientLabel = clientType === "cip" ? "CIP Client" : "OTC Client";
+  const clientTypeLabel = clientType === "cip" ? "Oficial (CIP)" : "OTC";
 
   if (launcherUpdating) {
     return (
@@ -301,7 +344,7 @@ export default function App() {
         <div className="launcher-header">
           <h1 className="launcher-logo">KoliseuOT</h1>
           <p className="launcher-subtitle">
-            {version ? `v${version}` : "Sem instalação"} — {serverLabel} / {clientLabel}
+            {version ? `v${version}` : "Sem instalação"} — {serverLabel} · {clientTypeLabel}
           </p>
         </div>
 
@@ -325,13 +368,13 @@ export default function App() {
             </button>
           </div>
           <div className="tab-group">
-            <span className="tab-group-label">Client</span>
+            <span className="tab-group-label">Cliente</span>
             <button
               className={`tab-btn ${clientType === "cip" ? "active" : ""}`}
               onClick={() => setClientType("cip")}
               disabled={isLoading}
             >
-              CIP
+              Oficial (CIP)
             </button>
             <button
               className={`tab-btn ${clientType === "otc" ? "active" : ""}`}
@@ -369,6 +412,16 @@ export default function App() {
             </button>
           )}
 
+          {status === "unavailable" && (
+            <button
+              className="btn btn-update"
+              disabled
+              title="O client OTC de produção ainda não está disponível"
+            >
+              EM BREVE
+            </button>
+          )}
+
           {(status === "checking" || status === "updating" || status === "verifying" || status === "repairing") && (
             <button className="btn btn-loading" disabled>
               {status === "updating" ? "ATUALIZANDO..." :
@@ -396,9 +449,30 @@ export default function App() {
           )}
         </div>
 
+        {/* Close-on-launch toggle (bottom-right, above the footer) */}
+        <div className="launch-options">
+          <label className="epic-checkbox">
+            <input
+              type="checkbox"
+              checked={closeOnLaunch}
+              onChange={(e) => handleCloseOnLaunchToggle(e.target.checked)}
+            />
+            <span className="epic-checkbox-box" aria-hidden="true" />
+            <span className="epic-checkbox-text">Fechar launcher ao iniciar client</span>
+          </label>
+        </div>
+
         {/* Bottom bar */}
         <div className="launcher-footer">
           <div className="footer-left">
+            <button
+              className="btn-icon"
+              onClick={initCheck}
+              disabled={isLoading}
+              title="Verificar atualizações"
+            >
+              &#x21BB; Verificar Atualizações
+            </button>
             <button
               className="btn-icon"
               onClick={handleVerifyIntegrity}
