@@ -14,6 +14,9 @@ npm run tauri dev
 
 ## Gerar nova versão do Launcher
 
+> Runbook completo (build assinado, publicação do update, rotação de chaves):
+> [`docs/RELEASE.md`](docs/RELEASE.md).
+
 ### 1. Alterar a versão
 
 Edite o arquivo `src-tauri/tauri.conf.json` e incremente o campo `version`:
@@ -46,7 +49,7 @@ Suba o `.exe` para o servidor (ex: `https://koliseuot.com.br/downloads/launcher/
 
 ### 5. Atualizar o endpoint
 
-Atualize o endpoint `GET /api/launcher/update` no site com:
+Atualize o endpoint `GET /api/launcher/updates/{{current_version}}` no site com:
 
 - Nova `version`
 - Nova `url` apontando para o `.exe` enviado
