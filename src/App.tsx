@@ -153,17 +153,9 @@ export default function App() {
   }, [server, clientType]);
 
   async function initCheck() {
-    // Production OTC is disabled for now (first weeks): only the test-server OTC can be
-    // downloaded. Hard-gate it in the launcher regardless of what the backend advertises.
-    if (server === "production" && clientType === "otc") {
-      setStatus("unavailable");
-      setVersion(null);
-      setError(null);
-      setDownloadAvailable(false);
-      setStatusMessage("O client OTC de produção ainda não está disponível. Baixe o OTC no Test Server.");
-      return;
-    }
-
+    // OTC availability (production and test server) is driven entirely by the backend
+    // manifest: an empty `download_url` for a given server/client surfaces as
+    // `download_available: false` below. No client-side hard-gate.
     try {
       setStatus("checking");
       setError(null);
